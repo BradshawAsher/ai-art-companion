@@ -119,7 +119,9 @@ function checkBadges(state: AchievementState): { badges: Badge[]; newlyEarned: B
 const AchievementContext = createContext<AchievementContextValue | null>(null);
 
 export function AchievementProvider({ children }: { children: ReactNode }) {
+  const { adminMode } = useAdmin();
   const [state, setState] = useState<AchievementState>({
+
     totalUploads: 0,
     currentStreak: 0,
     longestStreak: 0,
@@ -255,10 +257,22 @@ export function AchievementProvider({ children }: { children: ReactNode }) {
     []
   );
 
+  // Admin/demo mode: every badge earned and impressive stats for the stage.
+  const adminState: AchievementState = {
+    ...state,
+    totalUploads: Math.max(state.totalUploads, 12),
+    currentStreak: Math.max(state.currentStreak, 30),
+    longestStreak: Math.max(state.longestStreak, 30),
+    followupQuestionsAsked: Math.max(state.followupQuestionsAsked, 8),
+    tokensEarnedTotal: Math.max(state.tokensEarnedTotal, 1200),
+    badges: state.badges.map((b) => ({ ...b, earnedAt: b.earnedAt ?? new Date().toISOString() })),
+  };
+
   return (
     <AchievementContext.Provider value={{
-      ...state,
+      ...(adminMode ? adminState : state),
       newlyEarnedBadge,
+
       recordUpload,
       recordFollowup,
       addMediumExplored,
