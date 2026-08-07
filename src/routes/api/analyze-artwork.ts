@@ -251,8 +251,11 @@ async function handlePost({ request }: { request: Request }) {
     const { imageBase64, mimeType, preferredMedium, profilePrompt, notes } = body;
     if (!imageBase64) return json({ error: "No image provided" }, 400);
 
-    // Step 1: AI-generated art detection
-    const detection = await callGateway({
+    // Step 1: AI-generated art detection (admin/demo mode can skip it)
+    const detection = body.skipAiDetection
+      ? ({ ok: false, status: 0, message: "skipped" } as GatewayResult)
+      : await callGateway({
+
       messages: [
         { role: "system", content: AI_DETECTION_PROMPT },
         imageMessage(
