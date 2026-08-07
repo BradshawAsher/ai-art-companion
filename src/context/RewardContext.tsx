@@ -168,8 +168,10 @@ const ADMIN_UNLOCKS: UnlockState = {
 
 
 export function RewardProvider({ children }: { children: ReactNode }) {
+  const { adminMode } = useAdmin();
   const [state, setState] = useState<RewardState>(DEFAULT_STATE);
   const hydrated = useRef(false);
+
 
   const [newlyUnlocked, setNewlyUnlocked] = useState<string | null>(null);
 
