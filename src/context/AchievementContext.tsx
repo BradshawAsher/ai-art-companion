@@ -1,4 +1,6 @@
 import { createContext, useContext, useState, useEffect, useCallback, useRef, type ReactNode } from "react";
+import { useAdmin } from "@/context/AdminContext";
+
 
 export interface Badge {
   id: string;
