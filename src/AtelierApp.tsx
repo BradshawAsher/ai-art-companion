@@ -38,7 +38,10 @@ import { AccessibilityProvider, useAccessibility } from "@/context/Accessibility
 import { AchievementProvider, useAchievements, streakBonusTokens } from "@/context/AchievementContext";
 import { LearningProfileProvider, useLearningProfile, buildProfilePromptString } from "@/context/LearningProfileContext";
 import { WorkspaceProvider, useWorkspace } from "@/context/WorkspaceContext";
+import { AdminProvider, useAdmin } from "@/context/AdminContext";
 import WorkspacePanel from "@/components/WorkspacePanel";
+import AdminPanel from "@/components/AdminPanel";
+
 import { usePortfolio } from "@/hooks/usePortfolio";
 import { postAnalyze } from "@/lib/api-client";
 import { normalizeImage } from "@/lib/image-utils";
@@ -867,23 +870,25 @@ function AppContent() {
 
 export default function App() {
   return (
-    <SeasonProvider>
-      <MediumProvider>
-        <AccessibilityProvider>
-          <LearningProfileProvider>
-            <AchievementProvider>
-              <RewardProvider>
-                <StickerPlacementProvider>
-                  <WorkspaceProvider>
-                    <AppContent />
-                  </WorkspaceProvider>
-                </StickerPlacementProvider>
-              </RewardProvider>
-            </AchievementProvider>
-          </LearningProfileProvider>
-        </AccessibilityProvider>
-      </MediumProvider>
-    </SeasonProvider>
-
+    <AdminProvider>
+      <SeasonProvider>
+        <MediumProvider>
+          <AccessibilityProvider>
+            <LearningProfileProvider>
+              <AchievementProvider>
+                <RewardProvider>
+                  <StickerPlacementProvider>
+                    <WorkspaceProvider>
+                      <AppContent />
+                    </WorkspaceProvider>
+                  </StickerPlacementProvider>
+                </RewardProvider>
+              </AchievementProvider>
+            </LearningProfileProvider>
+          </AccessibilityProvider>
+        </MediumProvider>
+      </SeasonProvider>
+    </AdminProvider>
   );
 }
+
