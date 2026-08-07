@@ -267,6 +267,74 @@ function AppContent() {
     }
   }, [selectedFile, imagePayload, addTokens, subtractTokens, medium, notes, profilePromptString, recordUpload, portfolio, adminMode]);
 
+  /** Admin/demo: paints simple gradient artworks and stores them as gallery entries. */
+  const seedDemoEntries = useCallback(async () => {
+    const demos = [
+      {
+        colors: ["#f6c99f", "#e08a5f"],
+        skillLevel: "intermediate" as const,
+        feedback:
+          "Your value structure is doing real work here — the warm mid-tones carry the eye toward the focal point. Next, push your darkest darks a little further to give the composition more snap.",
+        tokens: 42,
+      },
+      {
+        colors: ["#a8c6e8", "#7d9ec7"],
+        skillLevel: "beginner" as const,
+        feedback:
+          "Lovely, confident line work. Try varying line weight — heavier on shadowed contours, lighter where light hits — and your forms will immediately read as three-dimensional.",
+        tokens: 28,
+      },
+      {
+        colors: ["#cbb6e6", "#8f74c4"],
+        skillLevel: "advanced" as const,
+        feedback:
+          "This is a mature, deliberate piece: the limited palette and edge control show real command. Consider one small area of textural contrast to keep the surface alive.",
+        tokens: 65,
+      },
+    ];
+
+    let added = 0;
+    for (const [i, demo] of demos.entries()) {
+      const canvas = document.createElement("canvas");
+      canvas.width = 800;
+      canvas.height = 800;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) continue;
+      const grad = ctx.createLinearGradient(0, 0, 800, 800);
+      grad.addColorStop(0, demo.colors[0]!);
+      grad.addColorStop(1, demo.colors[1]!);
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, 800, 800);
+      ctx.fillStyle = "rgba(255,255,255,0.28)";
+      for (let s = 0; s < 5; s++) {
+        ctx.beginPath();
+        ctx.arc(160 + s * 120, 300 + Math.sin(s) * 140, 70 - s * 8, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      const blob = await new Promise<Blob | null>((resolve) =>
+        canvas.toBlob((b) => resolve(b), "image/png"),
+      );
+      if (!blob) continue;
+      const file = new File([blob], `demo-artwork-${i + 1}.png`, { type: "image/png" });
+
+      const saved = await portfolio.addEntry({
+        file,
+        skillLevel: demo.skillLevel,
+        tokensEarned: demo.tokens,
+        feedback: demo.feedback,
+        critiquePins: [],
+        medium: "graphite",
+        mediumMatch: true,
+        isAnalog: true,
+        experimentationLevel: "medium",
+      });
+      if (saved) added++;
+    }
+    return added;
+  }, [portfolio]);
+
+
 
   const handleReset = useCallback(() => {
     handleClear();
