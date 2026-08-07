@@ -304,6 +304,7 @@ async function handlePost({ request }: { request: Request }) {
     ];
 
     let rawText = "";
+    let usedModel = "";
     let parsed: ReturnType<typeof parseAnalysisResponse> = null;
 
     // The model occasionally returns malformed or truncated JSON — retry (and escalate) before giving up.
@@ -319,7 +320,9 @@ async function handlePost({ request }: { request: Request }) {
       if (!analysis.ok) return json({ error: analysis.message }, analysis.status);
 
       rawText = textOf(analysis.data);
+      usedModel = analysis.model;
       parsed = parseAnalysisResponse(rawText);
+
       if (!parsed) {
         console.error(
           `[analyze-artwork] parse failure (attempt ${attempt + 1}, model ${analysis.model}). finish_reason=${analysis.data?.choices?.[0]?.finish_reason} raw=${rawText.slice(0, 1000)}`,
