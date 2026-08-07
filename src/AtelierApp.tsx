@@ -265,7 +265,7 @@ function AppContent() {
             : "generic";
       setAnalysis({ ...INITIAL_STATE, loading: false, error: msg, errorType });
     }
-  }, [selectedFile, imagePayload, addTokens, subtractTokens, medium, notes, profilePromptString, recordUpload, portfolio]);
+  }, [selectedFile, imagePayload, addTokens, subtractTokens, medium, notes, profilePromptString, recordUpload, portfolio, adminMode]);
 
 
   const handleReset = useCallback(() => {
