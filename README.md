@@ -1,8 +1,4 @@
-# LOVABLE VERSION - Atelier — AI Art Teacher for Neurodivergent Creators
-
-# NOTE THIS IS THE OLD README AND NOT FULLY UPDATED, REAL VERSION IN LOVABLE
-https://lovable.dev/projects/3fbfa346-8366-4a67-b1b4-4bea828bb050
-https://artistic-companion.lovable.app
+# Atelier — AI Art Teacher for Neurodivergent Creators
 
 An AI-powered art critique tool designed **with** neurodivergent learners in mind, not as an afterthought. Built for the IncludEDU Neurodiversity Hackathon (Track 3: AI Creative Amplifier), with the goal of showcasing at the Stanford Neurodiversity Summit 2026.
 
@@ -16,17 +12,21 @@ Students upload their artwork and receive personalized, encouraging AI critique.
 
 ### Key Features
 
-- **Learning Profile System** — Students select a neurodivergent profile (ADHD, autism, dyslexia, sensory processing, anxiety) or customize their own. The AI edge function receives this profile and adapts its feedback style accordingly.
-- **Step-by-Step Feedback** — Parses AI feedback into digestible sections presented one at a time with navigation controls. Students process at their own pace.
+- **Learning Profile System** — Students select a neurodivergent profile (ADHD, autism, dyslexia, sensory processing, anxiety) or customize their own. The profile is compiled into a prompt fragment sent with every critique request.
+- **Step-by-Step Feedback** — Parses AI feedback into digestible sections presented one at a time with navigation controls.
 - **Focus Mode** — Full-screen distraction-free view that hides everything except the feedback.
 - **Sensory Check-In** — A gentle pre-critique mood check that tailors an encouragement message to the student's current emotional state.
 - **Accessibility Panel** — Sensory mode controls (full / reduced / calm), dyslexia-friendly font (Lexend), high contrast, text size scaling, and keyboard focus outlines.
-- **Audio Narration** — Browser-native speech synthesis reads feedback aloud with selectable voice styles (warm, clear, calm) and speeds. Auto-narration option for hands-free listening.
-- **Achievements & Badges** — 13 earnable badges tracking uploads, streaks, follow-up questions, medium exploration, and token milestones. Toast notifications on unlock.
-- **Token Shop** — 8 purchasable items across categories (backgrounds, tools, cosmetic) including masterpiece generation, golden frames, and ambient sounds.
+- **Audio Narration** — Browser-native speech synthesis reads feedback aloud with selectable voice styles and speeds.
+- **Follow-up Chat** — Conversational Q&A about the same artwork; the artwork, the notepad and the sketchpad drawing are all attached so the teacher can reference them.
+- **Workspace Panel** — A notepad and sketchpad. Notes are woven into the critique prompt; the sketch can be shared with the follow-up chat.
+- **Achievements & Badges** — Earnable badges tracking uploads, streaks, follow-up questions, medium exploration, and token milestones, with toast notifications.
+- **Token Shop** — Purchasable backgrounds, tools and cosmetics, including AI masterpiece generation.
+- **Sticker Canvas** — Unlockable sticker packs students can place freely on the page.
 - **Portfolio Gallery** — Cloud-persisted portfolio of past artworks with skill progression tracking.
 - **Preferred Medium Selection** — Students pick their medium; the AI tailors advice and grants bonus tokens for medium-matched work.
-- **Seasonal Backgrounds** — Dynamic, animated backgrounds that change with the season (spring, summer, autumn, winter) with toggle control.
+- **Seasonal Backgrounds** — Animated backgrounds that change with the season, with manual override.
+- **Admin / Demo Mode** — A stage-ready demo switch (see below).
 
 ---
 
@@ -34,13 +34,57 @@ Students upload their artwork and receive personalized, encouraging AI critique.
 
 | Layer | Technology |
 |-------|-----------|
-| Frontend | React 18 + TypeScript + Vite |
-| Styling | Tailwind CSS 3 (custom design system, no purple/violet hues) |
+| Framework | TanStack Start v1 (React 19, SSR + server routes) |
+| Build | Vite 7 |
+| Styling | Tailwind CSS v4 via `src/styles.css` (custom design tokens, no purple/violet hues) |
 | Animation | Framer Motion |
 | Icons | Lucide React |
-| Backend | Supabase (Postgres, Edge Functions, Storage) |
-| AI | Google Gemini (via Supabase Edge Function) |
-| Persistence | Supabase for portfolio/artwork data; localStorage for user preferences (accessibility, profile, achievements) |
+| Backend | Lovable Cloud (Postgres, Storage) |
+| AI | Google Gemini through the Lovable AI Gateway — **no API key needed** |
+| Persistence | Cloud database + storage for portfolio artwork; `localStorage` for preferences (accessibility, profile, achievements, tokens) |
+| Package manager | Bun |
+
+There is no Supabase Edge Function and no `GEMINI_API_KEY`. All AI work happens in a TanStack server route that calls the gateway with the project's managed `LOVABLE_API_KEY`.
+
+---
+
+## AI Model Fallback Chain — confirmed set up
+
+Implemented in `src/routes/api/analyze-artwork.ts`. Requests start on the cheapest, fastest model and escalate automatically, resending the **identical conversation** so no context is lost.
+
+Text / vision chain (in order):
+
+1. `google/gemini-3.1-flash-lite`
+2. `google/gemini-2.5-flash-lite`
+3. `google/gemini-3-flash-preview`
+4. `google/gemini-3.5-flash`
+5. `google/gemini-3.6-flash`
+6. `google/gemini-2.5-flash`
+7. `google/gemini-3.1-pro-preview`
+8. `google/gemini-2.5-pro`
+
+Image generation chain: `google/gemini-3.1-flash-image` → `google/gemini-3-pro-image`.
+
+Escalation rules:
+
+- **429 (rate limited)** — short backoff, one retry on the same model, then escalate.
+- **Transient errors / 5xx** — escalate to the next model.
+- **`finish_reason: "length"`** (answer truncated) — escalate to a higher-capacity model.
+- **402 (credits) and 500 (misconfiguration)** — terminal, surfaced to the UI immediately.
+- **Unparseable critique JSON** — the whole chain is retried starting one model higher, then prose is salvaged so the student still gets feedback.
+
+The client (`src/lib/api-client.ts`) adds its own timeout plus retry-with-backoff on 429/5xx, and records every call (status, latency, model, error) into the in-memory debug log.
+
+---
+
+## Admin / Demo Mode
+
+An **Admin** button sits in the bottom-left corner. Its panel provides:
+
+- **Admin toggle** (persisted in `localStorage`) — unlimited tokens, every badge earned, every shop item, background and sticker pack unlocked, all purchases succeed, and AI-artwork rejection is skipped so a live demo never dead-ends.
+- **Seed demo entries** — paints three sample artworks and stores them as gallery entries so the portfolio is never empty on stage.
+- **Model fallback chain** readout.
+- **AI request log** — the last requests with status, mode, latency, model used, and any error.
 
 ---
 
@@ -48,67 +92,44 @@ Students upload their artwork and receive personalized, encouraging AI critique.
 
 ```
 src/
-├── App.tsx                          # Main app shell, provider tree, state orchestration
-├── main.tsx                         # React entry point
-├── index.css                        # Tailwind + custom design tokens + accessibility CSS
+├── AtelierApp.tsx                   # Main app shell, provider tree, state orchestration
+├── router.tsx                       # TanStack Router setup
+├── styles.css                       # Tailwind v4 theme tokens + accessibility CSS
+│
+├── routes/
+│   ├── __root.tsx                   # Root document, head metadata, fonts
+│   ├── index.tsx                    # "/" route rendering AtelierApp
+│   └── api/analyze-artwork.ts       # Server route: critique, follow-up, style analysis,
+│                                    # masterpiece generation, model fallback chain
 │
 ├── context/
-│   ├── AccessibilityContext.tsx     # Sensory mode, font size, dyslexia font, contrast, narration settings
-│   ├── AchievementContext.tsx       # Badges, streaks, milestone tracking (localStorage-persisted)
-│   ├── LearningProfileContext.tsx   # Neurodivergent profile selection + AI prompt adaptation string builder
-│   ├── MediumContext.tsx            # Preferred art medium selection
-│   ├── RewardContext.tsx            # Token economy (earning, spending, shop purchases)
-│   └── SeasonContext.tsx            # Seasonal background state
+│   ├── AccessibilityContext.tsx     # Sensory mode, font size, dyslexia font, contrast, narration
+│   ├── AchievementContext.tsx       # Badges, streaks, milestones (admin-aware)
+│   ├── AdminContext.tsx             # Admin/demo mode state
+│   ├── LearningProfileContext.tsx   # Profile selection + AI prompt adaptation builder
+│   ├── MediumContext.tsx            # Preferred art medium
+│   ├── RewardContext.tsx            # Token economy and shop unlocks (admin-aware)
+│   ├── SeasonContext.tsx            # Seasonal background state
+│   ├── StickerPlacementContext.tsx  # Placed stickers
+│   └── WorkspaceContext.tsx         # Notepad + sketchpad state
 │
-├── components/
-│   ├── AccessibilityPanel.tsx       # Full accessibility settings modal
-│   ├── AchievementBadge.tsx         # Badge collection modal with stats and progress bar
-│   ├── AudioNarration.tsx           # Web Speech API narration control with play/pause/stop
-│   ├── BadgeToast.tsx               # Toast notification when a new badge is earned
-│   ├── CritiquePinsOverlay.tsx      # Visual pins overlaid on artwork pointing to specific feedback
-│   ├── FollowupChat.tsx             # Conversational follow-up Q&A about the artwork
-│   ├── FocusMode.tsx                # Distraction-free full-screen feedback viewer + StepNavigation
-│   ├── JourneyTracker.tsx          # Skill progression timeline visualization
-│   ├── LoadingAnalysis.tsx         # Animated loading state during AI analysis
-│   ├── MarkdownRenderer.tsx        # Custom markdown-to-JSX renderer for AI feedback
-│   ├── MasterpieceModal.tsx        # AI-generated masterpiece display modal
-│   ├── Portfolio.tsx               # Gallery view of saved artworks
-│   ├── PremiumBackground.tsx       # Unlocked premium background themes
-│   ├── SeasonalBackground.tsx      # Seasonal animated background (particles, colors)
-│   ├── SeasonalControl.tsx         # Season toggle button
-│   ├── SensoryCheckIn.tsx          # Pre-critique mood/emotion check-in modal
-│   ├── StepByStepFeedback.tsx      # Parses feedback into navigable one-at-a-time sections
-│   ├── Stickers.tsx                # Decorative sticker elements
-│   ├── TokenHud.tsx                # Token balance display in header
-│   ├── TokenShop.tsx               # Shop modal with categorized purchasable items
-│   ├── UnlockToast.tsx             # Toast for unlocked features
-│   └── UploadZone.tsx              # Drag-and-drop artwork upload area
-│
-├── hooks/
-│   └── usePortfolio.ts             # Portfolio CRUD hook (Supabase storage + DB)
-│
+├── components/                      # UI (AdminPanel, WorkspacePanel, FocusMode,
+│                                    # StepByStepFeedback, Portfolio, TokenShop, …)
+├── hooks/usePortfolio.ts            # Portfolio CRUD (storage upload + DB rows + signed URLs)
 └── lib/
-    ├── scoring.ts                  # Token calculation logic, skill level normalization
-    └── supabase.ts                 # Supabase client initialization
-
-supabase/
-├── migrations/
-│   └── 20260723012340_create_portfolio_system.sql  # Portfolio table, RLS policies, storage bucket
-└── functions/
-    └── analyze-artwork/
-        └── index.ts                # AI critique edge function (Gemini vision API)
-                                   # Accepts: image, mimeType, preferredMedium, profilePrompt
-                                   # profilePrompt injects neurodivergent accommodation instructions
-                                   # into the AI's system prompt
+    ├── api-client.ts                # Fetch wrapper: timeout, retries, debug logging
+    ├── atelier-ai.server.ts         # System prompts, medium prompts, output format, parser
+    ├── debug-log.ts                 # In-memory AI request log for the admin panel
+    ├── image-utils.ts               # Client-side image conversion/compression
+    ├── scoring.ts                   # Token calculation, skill level normalization
+    └── supabase.ts                  # Cloud client + bucket name
 ```
 
 ---
 
 ## How the Learning Profile Adapts the AI
 
-The `LearningProfileContext` builds a prompt-adaptation string via `buildProfilePromptString()` and sends it as `profilePrompt` in the API call to the `analyze-artwork` edge function. The edge function injects it into the Gemini system prompt under a `NEURODIVERGENT LEARNER ACCOMMODATION` header.
-
-**Profile → AI behavior mapping:**
+`LearningProfileContext` builds a prompt-adaptation string and sends it as `profilePrompt` to `/api/analyze-artwork`, which appends it to the system prompt after the medium prompt and before the output format. Keep that ordering when editing.
 
 | Profile | AI Feedback Behavior |
 |---------|---------------------|
@@ -118,40 +139,26 @@ The `LearningProfileContext` builds a prompt-adaptation string via `buildProfile
 | Sensory | Minimal, calm, grounding tone, 1-2 key points only |
 | Anxiety | Extra warm, strengths front and center, growth framed as exciting possibilities |
 
-**Customization toggles** (independent of profile, can be mixed):
-- Pacing separators (visual `---` breaks between sections)
-- Strengths first (always lead with praise)
-- One thing at a time (single growth suggestion)
-- Plain language (define technical terms)
-- Detail level (minimal / balanced / detailed)
-- Custom free-text note for personal preferences
+**Customization toggles** (mixable, independent of profile): pacing separators, strengths first, one thing at a time, plain language, detail level (minimal / balanced / detailed), and a custom free-text note.
 
 ---
 
 ## Design System
 
 - **Palette**: Warm earth tones (cream, sand, deep earth, warm taupe) with accent ramps in amber, coral, rose, sage, sky, lavender — no purple/violet hues.
-- **Fonts**: Outfit (body), Fraunces (display/headings), Lexend (dyslexia-friendly mode).
-- **Spacing**: 8px grid system.
-- **Animations**: Framer Motion throughout, with three sensory levels (full / reduced / none) controllable from the accessibility panel.
-- **Accessibility CSS**: Body-level classes (`sensory-reduced`, `sensory-minimal`, `font-dyslexic`, `contrast-high`, `text-sm-base` through `text-xl-base`) applied via `useEffect` in App.tsx.
+- **Fonts**: Outfit (body), Fraunces (display/headings), Lexend (dyslexia-friendly mode), loaded via a `<link>` in `__root.tsx`.
+- **Animations**: Framer Motion throughout, with three sensory levels controllable from the accessibility panel.
+- **Accessibility CSS**: Body-level classes (`sensory-reduced`, `sensory-minimal`, `font-dyslexic`, `contrast-high`, text-size scales) applied via `useEffect` in `AtelierApp.tsx`.
 
 ---
 
-## Supabase Setup
+## Backend
 
-The project uses a pre-provisioned Supabase instance. Credentials are in `.env` (do not modify).
+Provisioned automatically by Lovable Cloud; credentials live in `.env` (do not edit).
 
-### Database
-- **Table**: `portfolio_entries` — stores artwork metadata, skill level, tokens earned, feedback, critique pins, medium.
-- **RLS**: Enabled with per-user CRUD policies (`auth.uid() = user_id`).
-- **Storage**: `artwork-images` bucket for uploaded artwork files.
-
-### Edge Function
-- **`analyze-artwork`** — Accepts an image (base64), preferred medium, and neurodivergent profile prompt. Calls Google Gemini's vision API to analyze the artwork and return structured critique. Deployed via Supabase MCP tool.
-
-### Required Secrets (pre-configured)
-- `GEMINI_API_KEY` — Google Gemini API key for the AI vision model.
+- **Table `portfolio_entries`** — artwork metadata, skill level, tokens earned, feedback, critique pins, medium, experimentation level. RLS enabled with open policies (the app has no auth yet).
+- **Storage bucket `artworks`** — private; images are read through time-limited signed URLs.
+- **Server route `/api/analyze-artwork`** — one endpoint, four modes: default artwork analysis, `followup`, `analyze-style`, and `generate-masterpiece`.
 
 ---
 
@@ -159,53 +166,42 @@ The project uses a pre-provisioned Supabase instance. Credentials are in `.env` 
 
 | Command | Description |
 |---------|-------------|
-| `npm run dev` | Start Vite dev server |
-| `npm run build` | Production build |
-| `npm run typecheck` | TypeScript type checking (no emit) |
-| `npm run lint` | ESLint |
-| `npm run preview` | Preview production build |
+| `bun run dev` | Start the dev server |
+| `bun run build` | Production build |
+| `bun run build:dev` | Development-mode build |
+| `bun run preview` | Preview the production build |
+| `bun run lint` | ESLint |
+| `bun run format` | Prettier |
 
 ---
 
 ## Agent Handoff Notes
 
-If you are another AI agent picking up this project, here's what you need to know:
-
 ### Architecture decisions
-- **Provider tree order** (outermost → innermost): `SeasonProvider` → `MediumProvider` → `AccessibilityProvider` → `LearningProfileProvider` → `AchievementProvider` → `RewardProvider` → `AppContent`. This order matters because `AppContent` consumes all of them.
-- **State persistence**: User preferences (accessibility, learning profile, achievements, tokens) are in `localStorage`, NOT Supabase. Only portfolio artwork data goes to Supabase. This was intentional — preferences are client-side and don't need sync.
-- **No auth**: The app currently has no authentication. Portfolio entries use a `user_id` column with RLS policies ready for when auth is added, but the current flow generates a client-side ID. If adding auth, wire up Supabase email/password auth and replace the client-side ID with `auth.uid()`.
+- **Provider tree order** (outermost → innermost): `AdminProvider` → `SeasonProvider` → `MediumProvider` → `AccessibilityProvider` → `LearningProfileProvider` → `AchievementProvider` → `RewardProvider` → `StickerPlacementProvider` → `WorkspaceProvider` → `AppContent`. `AdminProvider` must stay outermost because reward and achievement state read from it.
+- **State persistence**: preferences, tokens and achievements are `localStorage`; only portfolio artwork goes to the cloud. Intentional — preferences don't need sync.
+- **No auth**: RLS policies are currently open. If auth is added, scope the policies to `auth.uid()` and add a `user_id` column.
 
-### When modifying the AI edge function
-- Read `supabase/functions/analyze-artwork/index.ts` first — it's a large file with the system prompt, medium-specific prompts, and output format all defined as string constants.
-- The `profilePrompt` parameter is injected into the system prompt after the medium prompt and before the output format. Keep this ordering.
-- Deploy changes using the `mcp__supabase__deploy_edge_function` MCP tool with `slug: "analyze-artwork"` and `verify_jwt: false`. Do NOT use the Supabase CLI.
-- The function handles both artwork analysis AND follow-up chat questions (same endpoint, different request shape).
+### When modifying the AI route
+- Prompts live in `src/lib/atelier-ai.server.ts`; the HTTP/fallback logic lives in `src/routes/api/analyze-artwork.ts`. Keep them separated.
+- Never call the gateway from browser code — `LOVABLE_API_KEY` is server-only and read inside the handler.
+- Adding a model means adding an exact `vendor/model` id to `TEXT_MODELS` or `IMAGE_MODELS`, and mirroring it in `MODEL_CHAIN` in `AdminPanel.tsx` for the readout.
 
-### When adding new accessibility features
-- Add new state fields to `AccessibilityContext.tsx` or `LearningProfileContext.tsx` depending on whether they're sensory/visual or learning/feedback related.
-- Add corresponding CSS classes in `src/index.css` under the `@layer base` block.
-- Apply the classes in the `useEffect` in `AppContent` that manages body class names.
+### When adding accessibility features
+Add state to `AccessibilityContext.tsx` (sensory/visual) or `LearningProfileContext.tsx` (feedback style), add CSS in `src/styles.css`, and apply the class in the body-class `useEffect` in `AtelierApp.tsx`.
 
-### When adding new achievements/badges
-- Add badge definitions to the `ALL_BADGES` array in `AchievementContext.tsx`.
-- Add the earn condition logic in the `checkBadges()` function.
-- Add the icon mapping in `AchievementBadge.tsx` (`BADGE_ICONS` object).
-- The `BadgeToast` component automatically displays when `newlyEarnedBadge` is set — no wiring needed.
-
-### When adding shop items
-- Add item definitions to the `SHOP_ITEMS` array in `TokenShop.tsx`.
-- Background-type items need a corresponding entry in `RewardContext.tsx` (`ShopBackground` type and `PREMIUM_BACKGROUNDS` set).
-- Item-type purchases just need a `ShopItem` type entry in `RewardContext.tsx`.
+### When adding badges or shop items
+- Badges: definitions in `ALL_BADGES` plus earn logic in `checkBadges()` (`AchievementContext.tsx`), and an icon in `AchievementBadge.tsx`. `BadgeToast` renders automatically.
+- Shop: items in `TokenShop.tsx`; background items also need a `ShopBackground` entry in `RewardContext.tsx`. Admin mode's "unlock all" lists in `RewardContext.tsx` must include new ids.
 
 ### Known considerations
-- The bundle is ~630KB (177KB gzipped). If this becomes an issue, consider code-splitting with dynamic imports for the modal components.
-- The `SensoryCheckIn` only triggers if the student has a learning profile set (`profile !== "none"`). Students without a profile go straight to analysis.
-- `AudioNarration` uses the browser's `SpeechSynthesisAPI` — no external API or key needed, but voice availability varies by browser/OS.
-- The `StepByStepFeedback` parser splits on markdown headings (`#`, `##`, `###`). If the AI output format changes, update the parser accordingly.
+- `SensoryCheckIn` only triggers when a learning profile is set; otherwise analysis starts immediately.
+- `AudioNarration` uses the browser Speech Synthesis API — no key needed, but voice availability varies by browser/OS.
+- `StepByStepFeedback` splits on markdown headings; update the parser if the AI output format changes.
+- Artwork images are compressed client-side before upload to keep gateway payloads small.
 
 ### Hackathon context
 - **Track**: Track 3 — AI Creative Amplifier
 - **Event**: IncludEDU Neurodiversity Hackathon
 - **Showcase**: Stanford Neurodiversity Summit, September 2026
-- **Design principle**: "Designed WITH, not just FOR" — the hackathon requires involvement of at least one real neurodivergent user in design or testing. Document any user testing feedback and how it changed the build.
+- **Design principle**: "Designed WITH, not just FOR" — document any neurodivergent user testing and how it changed the build.
