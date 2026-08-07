@@ -14,7 +14,51 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      portfolio_entries: {
+        Row: {
+          created_at: string
+          critique_pins: Json
+          experimentation_level: string
+          feedback: string
+          id: string
+          image_path: string
+          image_url: string
+          is_analog: boolean
+          medium: string
+          medium_match: boolean
+          skill_level: string
+          tokens_earned: number
+        }
+        Insert: {
+          created_at?: string
+          critique_pins?: Json
+          experimentation_level?: string
+          feedback?: string
+          id?: string
+          image_path: string
+          image_url: string
+          is_analog?: boolean
+          medium?: string
+          medium_match?: boolean
+          skill_level: string
+          tokens_earned?: number
+        }
+        Update: {
+          created_at?: string
+          critique_pins?: Json
+          experimentation_level?: string
+          feedback?: string
+          id?: string
+          image_path?: string
+          image_url?: string
+          is_analog?: boolean
+          medium?: string
+          medium_match?: boolean
+          skill_level?: string
+          tokens_earned?: number
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
