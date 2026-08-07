@@ -284,19 +284,52 @@ export function RewardProvider({ children }: { children: ReactNode }) {
 
   const clearNewlyUnlocked = useCallback(() => setNewlyUnlocked(null), []);
 
+  // Admin/demo mode: everything unlocked, unlimited tokens, every purchase succeeds.
+  const effective = adminMode
+    ? {
+        tokens: ADMIN_TOKENS,
+        totalEarned: Math.max(state.totalEarned, ADMIN_TOKENS),
+        unlocks: ADMIN_UNLOCKS,
+        purchasedBackgrounds: ALL_SHOP_BACKGROUNDS,
+        purchasedItems: ALL_SHOP_ITEMS,
+      }
+    : {
+        tokens: state.tokens,
+        totalEarned: state.totalEarned,
+        unlocks: state.unlocks,
+        purchasedBackgrounds: state.purchasedBackgrounds,
+        purchasedItems: state.purchasedItems,
+      };
+
   return (
     <RewardContext.Provider value={{
-      tokens: state.tokens,
-      totalEarned: state.totalEarned,
-      unlocks: state.unlocks,
+      tokens: effective.tokens,
+      totalEarned: effective.totalEarned,
+      unlocks: effective.unlocks,
       lastEarnedAmount: state.lastEarnedAmount,
       newlyUnlocked,
-      purchasedBackgrounds: state.purchasedBackgrounds,
-      purchasedItems: state.purchasedItems,
+      purchasedBackgrounds: effective.purchasedBackgrounds,
+      purchasedItems: effective.purchasedItems,
       activeBackground: state.activeBackground,
       addTokens,
       subtractTokens,
-      spendTokens,
+      spendTokens: adminMode ? () => true : spendTokens,
+      resetTokens,
+      clearNewlyUnlocked,
+      purchaseBackground: adminMode
+        ? (bg: ShopBackground) => {
+            setActiveBackground(bg);
+            return true;
+          }
+        : purchaseBackground,
+      purchaseItem: adminMode ? () => true : purchaseItem,
+      setActiveBackground,
+    }}>
+      {children}
+    </RewardContext.Provider>
+  );
+}
+
       resetTokens,
       clearNewlyUnlocked,
       purchaseBackground,
