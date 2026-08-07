@@ -330,17 +330,6 @@ export function RewardProvider({ children }: { children: ReactNode }) {
   );
 }
 
-      resetTokens,
-      clearNewlyUnlocked,
-      purchaseBackground,
-      purchaseItem,
-      setActiveBackground,
-    }}>
-      {children}
-    </RewardContext.Provider>
-  );
-}
-
 export function useReward() {
   const ctx = useContext(RewardContext);
   if (!ctx) throw new Error("useReward must be used within RewardProvider");
