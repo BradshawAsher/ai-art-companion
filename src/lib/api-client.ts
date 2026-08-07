@@ -1,4 +1,7 @@
+import { pushDebugEntry } from "@/lib/debug-log";
+
 const ANALYZE_ENDPOINT = "/api/analyze-artwork";
+
 
 export class ApiError extends Error {
   status: number;
