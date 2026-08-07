@@ -889,6 +889,8 @@ function AppContent() {
       </AnimatePresence>
 
       <WorkspacePanel open={workspaceOpen} onClose={() => setWorkspaceOpen(false)} />
+      <AdminPanel onSeedDemo={seedDemoEntries} />
+
 
 
       <StickerCanvas
