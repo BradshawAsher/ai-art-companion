@@ -187,6 +187,8 @@ function AppContent() {
         preferredMedium: MEDIUM_API_VALUES[medium],
         profilePrompt: profilePromptString,
         notes,
+        skipAiDetection: adminMode,
+
       });
 
       if (data.aiDetected) {
