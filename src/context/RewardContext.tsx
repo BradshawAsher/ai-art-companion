@@ -1,4 +1,6 @@
 import { createContext, useContext, useState, useEffect, useCallback, useRef, type ReactNode } from "react";
+import { useAdmin } from "@/context/AdminContext";
+
 
 export type StickerPack = "starter" | "nature" | "cosmic";
 export type ThemeName = "blossom" | "ocean";
@@ -126,6 +128,44 @@ function findNewlyUnlocked(oldState: UnlockState, newState: UnlockState): string
 }
 
 const RewardContext = createContext<RewardContextValue | null>(null);
+
+/** Everything purchasable — used by admin mode to unlock the whole shop. */
+export const ALL_SHOP_BACKGROUNDS: ShopBackground[] = [
+  "greek-mythology",
+  "chinese-art",
+  "renaissance-atelier",
+  "ukiyo-e",
+  "art-deco",
+  "cosmic-observatory",
+];
+
+export const ALL_SHOP_ITEMS: ShopItem[] = [
+  "generate-masterpiece",
+  "frame-gold",
+  "frame-baroque",
+  "frame-minimal",
+  "ambient-sounds",
+  "critique-spotlight",
+  "extra-critique",
+  "colour-analysis",
+  "composition-grid",
+  "master-study-plan",
+  "palette-generator",
+  "portfolio-export",
+  "streak-freeze",
+  "sticker-pack-botanical",
+  "sticker-pack-celestial",
+  "narrator-voice",
+];
+
+const ADMIN_TOKENS = 99999;
+
+const ADMIN_UNLOCKS: UnlockState = {
+  stickerPacks: { starter: true, nature: true, cosmic: true },
+  animatedBackground: true,
+  premiumThemes: ["blossom", "ocean"],
+};
+
 
 export function RewardProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<RewardState>(DEFAULT_STATE);
