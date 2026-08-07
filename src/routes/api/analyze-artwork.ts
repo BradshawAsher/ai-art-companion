@@ -255,16 +255,16 @@ async function handlePost({ request }: { request: Request }) {
     const detection = body.skipAiDetection
       ? ({ ok: false, status: 0, message: "skipped" } as GatewayResult)
       : await callGateway({
+          messages: [
+            { role: "system", content: AI_DETECTION_PROMPT },
+            imageMessage(
+              imageBase64,
+              mimeType,
+              "Analyze this image and determine if it is AI-generated. Respond with only the JSON object.",
+            ),
+          ],
+        });
 
-      messages: [
-        { role: "system", content: AI_DETECTION_PROMPT },
-        imageMessage(
-          imageBase64,
-          mimeType,
-          "Analyze this image and determine if it is AI-generated. Respond with only the JSON object.",
-        ),
-      ],
-    });
 
     if (detection.ok) {
       const match = textOf(detection.data).match(/\{[\s\S]*?\}/);
