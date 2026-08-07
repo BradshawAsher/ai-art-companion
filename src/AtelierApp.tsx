@@ -104,6 +104,8 @@ function AppContent() {
   const { recordUpload, recordFollowup, pendingStreakMilestone, clearPendingStreakMilestone } = useAchievements();
   const learningProfile = useLearningProfile();
   const { notes, hasWorkspaceContent } = useWorkspace();
+  const { adminMode } = useAdmin();
+
   const { surveyCompleted, profileLoaded } = learningProfile;
   const [view, setView] = useState<"studio" | "gallery">("studio");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
