@@ -251,17 +251,20 @@ async function handlePost({ request }: { request: Request }) {
     const { imageBase64, mimeType, preferredMedium, profilePrompt, notes } = body;
     if (!imageBase64) return json({ error: "No image provided" }, 400);
 
-    // Step 1: AI-generated art detection
-    const detection = await callGateway({
-      messages: [
-        { role: "system", content: AI_DETECTION_PROMPT },
-        imageMessage(
-          imageBase64,
-          mimeType,
-          "Analyze this image and determine if it is AI-generated. Respond with only the JSON object.",
-        ),
-      ],
-    });
+    // Step 1: AI-generated art detection (admin/demo mode can skip it)
+    const detection = body.skipAiDetection
+      ? ({ ok: false, status: 0, message: "skipped" } as GatewayResult)
+      : await callGateway({
+          messages: [
+            { role: "system", content: AI_DETECTION_PROMPT },
+            imageMessage(
+              imageBase64,
+              mimeType,
+              "Analyze this image and determine if it is AI-generated. Respond with only the JSON object.",
+            ),
+          ],
+        });
+
 
     if (detection.ok) {
       const match = textOf(detection.data).match(/\{[\s\S]*?\}/);
@@ -301,6 +304,7 @@ async function handlePost({ request }: { request: Request }) {
     ];
 
     let rawText = "";
+    let usedModel = "";
     let parsed: ReturnType<typeof parseAnalysisResponse> = null;
 
     // The model occasionally returns malformed or truncated JSON — retry (and escalate) before giving up.
@@ -316,7 +320,9 @@ async function handlePost({ request }: { request: Request }) {
       if (!analysis.ok) return json({ error: analysis.message }, analysis.status);
 
       rawText = textOf(analysis.data);
+      usedModel = analysis.model;
       parsed = parseAnalysisResponse(rawText);
+
       if (!parsed) {
         console.error(
           `[analyze-artwork] parse failure (attempt ${attempt + 1}, model ${analysis.model}). finish_reason=${analysis.data?.choices?.[0]?.finish_reason} raw=${rawText.slice(0, 1000)}`,
@@ -360,7 +366,9 @@ async function handlePost({ request }: { request: Request }) {
       isAnalog: parsed.isAnalog,
       experimentationLevel: parsed.experimentationLevel,
       critiquePins: parsed.critiquePins,
+      model: usedModel,
     });
+
   } catch (err) {
     console.error("[analyze-artwork] unexpected error", err);
     return json({ error: err instanceof Error ? err.message : "Unknown error" }, 500);
