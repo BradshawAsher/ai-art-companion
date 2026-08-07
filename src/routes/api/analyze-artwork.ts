@@ -366,7 +366,9 @@ async function handlePost({ request }: { request: Request }) {
       isAnalog: parsed.isAnalog,
       experimentationLevel: parsed.experimentationLevel,
       critiquePins: parsed.critiquePins,
+      model: usedModel,
     });
+
   } catch (err) {
     console.error("[analyze-artwork] unexpected error", err);
     return json({ error: err instanceof Error ? err.message : "Unknown error" }, 500);
