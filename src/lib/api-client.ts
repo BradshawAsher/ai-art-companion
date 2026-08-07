@@ -27,10 +27,12 @@ export async function postAnalyze<T = any>(body: unknown, opts: PostOptions = {}
   const retries = opts.retries ?? 3;
   const timeoutMs = opts.timeoutMs ?? 120000;
   let lastError: unknown = null;
+  const mode = (body as { mode?: string })?.mode ?? "analyze";
 
   for (let attempt = 0; attempt <= retries; attempt++) {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeoutMs);
+    const started = Date.now();
     try {
       const response = await fetch(ANALYZE_ENDPOINT, {
         method: "POST",
@@ -44,10 +46,18 @@ export async function postAnalyze<T = any>(body: unknown, opts: PostOptions = {}
 
       if (response.ok) {
         if (!data) throw new ApiError("No response received from the AI", 502);
+        pushDebugEntry({
+          mode,
+          status: response.status,
+          ms: Date.now() - started,
+          model: data?.model ?? null,
+          preview: typeof data?.feedback === "string" ? data.feedback.slice(0, 160) : null,
+        });
         return data as T;
       }
 
       const message = data?.error || `The analysis service returned an error (${response.status})`;
+      pushDebugEntry({ mode, status: response.status, ms: Date.now() - started, error: message });
       // Retry only transient statuses
       if ((response.status === 429 || response.status >= 500) && attempt < retries) {
         lastError = new ApiError(message, response.status);
@@ -55,6 +65,7 @@ export async function postAnalyze<T = any>(body: unknown, opts: PostOptions = {}
         continue;
       }
       throw new ApiError(message, response.status);
+
     } catch (err) {
       clearTimeout(timer);
       if (err instanceof ApiError) {
