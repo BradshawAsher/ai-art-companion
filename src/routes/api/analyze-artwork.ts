@@ -18,11 +18,17 @@ const GATEWAY_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
  * model while sending the exact same conversation — so context is preserved.
  */
 const TEXT_MODELS = [
+  "google/gemini-3.1-flash-lite",
+  "google/gemini-2.5-flash-lite",
+  "google/gemini-3-flash-preview",
   "google/gemini-3.5-flash",
+  "google/gemini-3.6-flash",
+  "google/gemini-2.5-flash",
   "google/gemini-3.1-pro-preview",
   "google/gemini-2.5-pro",
 ];
 const IMAGE_MODELS = ["google/gemini-3.1-flash-image", "google/gemini-3-pro-image"];
+
 
 type ChatMessage = {
   role: "system" | "user" | "assistant";
